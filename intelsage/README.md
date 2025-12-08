@@ -1,106 +1,195 @@
-# IntelDoc Sage Console
+# IntelDoc Sage Console — Final Evaluation README
 
-IntelDoc Sage Console (IntelSage) is a lightweight Streamlit app for ingesting PDFs, text files, and images, embedding their content using a local SentenceTransformer model, storing vectors in Pinecone, and querying them with Google Generative AI (Gemini) to produce detailed answers and summaries.
+This README is prepared for the Dev_Or_Die final evaluation. It documents the project purpose, features, architecture, setup, AI/ML integrations, error handling, team responsibilities, and future improvements. Use it as the primary reference for your evaluation.
 
-**Quick Start**
-- Prerequisites: Python 3.8+ and Git.
-- Clone the repo, create a virtual environment, install dependencies, populate your `.env`, download the local embedding model, and run the Streamlit app.
+**Project Overview**
+- **Name:** IntelDoc Sage Console (IntelSage)
+- **Short description:** A Streamlit web app that ingests PDFs, text files and images (OCR), embeds document content with a local SentenceTransformer model, stores vectors in Pinecone, and uses Google Generative AI (Gemini) to synthesize answers and summaries from retrieved context.
 
-PowerShell example (copy-paste):
+**Problem Statement (PS Number)**
+- PS Number: *Add your PS number here*.
+- **Problem:** Quickly extract, search and summarize information from large document sets (PDFs, images, text) to support knowledge discovery and question answering.
+
+**Features implemented**
+- Upload multiple documents: PDFs, text, and images.
+- Text extraction from PDFs (PyPDF2) and images (model-assisted OCR via Google Generative AI).
+- Local embedding with `sentence-transformers` (model downloaded to `./my_model`).
+- Vector storage and retrieval using Pinecone (`sage-intel` index).
+- Contextual retrieval + LLM-based answer generation using Google Generative AI (Gemini).
+- Simple UI with Streamlit: file upload, process documents, summarize, and chat-like Q&A.
+- Pinecone index management: reset/clear database from UI.
+
+**Tech Stack used**
+- Python 3.8+
+- Streamlit (UI)
+- PyPDF2 (PDF parsing)
+- Pillow (image handling)
+- google-generative-ai (Gemini integration)
+- Pinecone client (vector DB)
+- sentence-transformers (local embedding model)
+- huggingface-hub (model download)
+- python-dotenv (read `.env`)
+
+**System Architecture / High-level design**
+
+- User (browser) -> Streamlit UI (`intelsage/sage.py`)
+- Uploaded files -> Extraction layer (PDF/text/image) -> raw text
+- Embedding layer -> local SentenceTransformer (in `./my_model`) -> vectors
+- Vector store -> Pinecone index `sage-intel`
+- Retrieval -> nearest neighbors -> assemble context
+- LLM layer -> Google Generative AI (Gemini) with context -> final response
+
+Diagram (textual):
+
+User -> Streamlit UI -> Extraction -> Embedding -> Pinecone -> Retrieval -> Gemini -> User
+
+**API documentation (where applicable)**
+- Google Generative AI: configured from environment variable `GOOGLE_API_KEY`. The app calls `genai.list_models()` and `model.generate_content()`.
+- Pinecone: configured from `PINECONE_API_KEY`. The app uses `Pinecone(api_key=...)`, `pc.Index("sage-intel")`, `index.upsert()` and `index.query()`.
+- SentenceTransformer: local model loaded via `SentenceTransformer("./my_model")`. If missing, the app stops and prompts to run `download_model.py`.
+
+**Key code entry points**
+- `intelsage/sage.py` — main Streamlit app. Responsible for UI, file upload, extraction, embedding, Pinecone ops, and LLM calls.
+- `intelsage/download_model.py` — downloads `sentence-transformers/all-MiniLM-L6-v2` to local `./my_model`.
+
+**Setup Instructions (how to run the project locally)**
+
+1. Clone the repository:
 
 ```powershell
-Set-Location -Path "d:\Project"
-# Create (or activate) a virtual environment
+git clone <your-repo-url>
+Set-Location -Path "d:\Project"  # adjust path as needed
+```
+
+2. Create and activate a virtual environment (PowerShell):
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
 
-# Install runtime dependencies
+3. Install dependencies:
+
+```powershell
 pip install --upgrade pip
 pip install streamlit PyPDF2 google-generative-ai pinecone-client sentence-transformers pillow python-dotenv huggingface-hub
+```
 
-# Create a local .env from the example and edit it with your keys
+4. Create a `.env` from `.env.example` and fill values (DO NOT commit `.env`):
+
+```powershell
 Copy-Item -Path .env.example -Destination .env -Force
 notepad .env
+```
 
-# Download the local sentence-transformers model used by the app
+Required variables in `.env`:
+- `GOOGLE_API_KEY` — API key for Google Generative AI
+- `PINECONE_API_KEY` — Pinecone API key
+
+5. Download the local embedding model:
+
+```powershell
 python intelsage/download_model.py
+```
 
-# Run the Streamlit app
+6. Run the Streamlit app:
+
+```powershell
 streamlit run intelsage/sage.py
 ```
 
-If you prefer `requirements.txt`, you can freeze the installed packages after installing and commit the file for your environment.
+Open the printed local URL (usually `http://localhost:8501`) to use the app.
 
-**Environment variables**
-Create a file named `.env` in the project root (we include `.env.example` with the required keys). The app reads these variables using `python-dotenv`.
+**Deployment Link**
+- If deployed, provide the public link here. (Add your deployment link.)
 
-- `GOOGLE_API_KEY` — Google Generative AI API key (Gemini)
-- `PINECONE_API_KEY` — Pinecone API key
+**Screenshots / GIFs of working features**
+- Add screenshots or GIFs under a directory `docs/screenshots/` and reference them here with markdown images. Example:
 
-Do NOT commit your `.env` file to source control. This repository already includes `.gitignore` configured to ignore `.env`.
-
-**What the app does**
-- Upload PDFs, text files, or images (OCR) through the Streamlit UI.
-- Extracts text (PDF via PyPDF2, images via Google Vision/model-based OCR fallback).
-- Encodes document text using a local SentenceTransformer model (downloaded to `./my_model`).
-- Stores vectors in a Pinecone index named `sage-intel`.
-- Answers user queries by retrieving relevant vectors and passing context to Google Generative AI.
-
-**Download model**
-The repo includes `intelsage/download_model.py` which uses `huggingface_hub.snapshot_download` to fetch `sentence-transformers/all-MiniLM-L6-v2` into `./my_model`. Run:
-
-```powershell
-python intelsage/download_model.py
+```markdown
+![Upload and Process](docs/screenshots/upload_process.png)
 ```
 
-If you prefer a different model, update `repo_id` in that script.
+**Error Handling & Reliability considerations**
+- Missing API Keys: The app checks for `GOOGLE_API_KEY` and `PINECONE_API_KEY` and shows Streamlit errors if missing.
+- Missing local model: `load_model()` checks for `./my_model` and stops the app with an error instructing to run `download_model.py`.
+- Pinecone exceptions: UI wraps index delete/upsert/query in try/except and shows descriptive errors.
+- Rate limits & timeouts: LLM and Pinecone calls can fail on rate limits. Add exponential backoff and retries for production.
+- Data privacy: `.env` is ignored by `.gitignore`. Never commit secrets; rotate compromised keys immediately.
 
-**CI / GitHub Actions**
-- For running this project in CI or on GitHub Pages/Cloud, store sensitive values (API keys) as repository secrets in `Settings -> Secrets and variables -> Actions` and reference them in workflows. Do not embed secrets in YAML or commit them to the repo.
+**AI/ML Integration details**
+- Embeddings: `sentence-transformers/all-MiniLM-L6-v2` (local) is used to create dense vectors for text passages.
+- Vector DB: Pinecone used to store and query vectors (`sage-intel` index).
+- LLM: Google Generative AI (Gemini) used to generate summaries and answers from assembled context.
+- Workflow: Documents -> text extraction -> chunking (per page) -> embedding -> upsert to Pinecone -> query -> assemble context -> LLM prompt -> answer.
 
-**If a secret was committed accidentally**
-1. Immediately rotate/regenerate the exposed keys from their provider consoles (Google Cloud, Pinecone).
-2. Remove the file from the latest commit and stop tracking it:
+**Team members and responsibilities**
+- Add team members and their roles here. Example:
+- Anant Mani — Project owner, Streamlit UI, LLM integration
+- <Member 2> — Vector DB setup, embeddings
+- <Member 3> — Model download automation, CI/CD
+
+**Future Improvements**
+- Add chunking and paging strategies for better retrieval (overlap, dynamic sizes).
+- Add retries/backoff and monitoring for LLM and Pinecone calls.
+- Add automated tests and CI workflows.
+- Add Dockerfile for consistent deployment.
+- Add role-based access and authenticated UI for shared deployments.
+
+**Evaluation mapping (how this README addresses evaluation criteria)**
+- UI/UX: Streamlit UI with upload, progress bar, summarize and chat features.
+- Code quality: Modular `sage.py` functions for extraction, embedding, and LLM calls — documented in this README.
+- Folder structure: `intelsage/` contains app and helpers; model in `./my_model`.
+- Functionality & feature completeness: Document ingestion, embedding, storage, retrieval, summarization, and chat.
+- API usage & integrations: Google Generative AI, Pinecone, HuggingFace model download — documented here.
+- Deployment: Steps to run locally; add deployment link when available.
+- Error handling: App-level checks and try/except handling described above.
+- Git hygiene: `.env` ignored; `.env.example` included; guidelines to remove secrets provided.
+
+**Git push troubleshooting (if you cannot push `README.md`)**
+Common reasons you might be unable to push:
+
+- Not a git repository in the current path — make sure you are in the repo root (where `.git` is). Check:
 
 ```powershell
-Set-Location -Path "C:\path\to\repo"
-git rm --cached .env
-git commit -m "Remove .env from repository"
-git push
+Set-Location -Path "d:\Project"
+git status
+git rev-parse --show-toplevel
 ```
 
-3. If the secret was pushed to a remote and you need to purge it from history, use a history-cleaning tool such as `git filter-repo` or the BFG Repo-Cleaner and then force-push. Example (BFG):
+- No remote configured or wrong remote URL. Check:
 
 ```powershell
-# Install BFG (requires Java). Then:
-bfg --delete-files .env
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
-git push --force
+git remote -v
 ```
 
-Note: Deleting from history does NOT replace the secret — you must rotate/regenerate compromised keys.
+- Authentication failure: you may need to use a GitHub Personal Access Token (PAT) when using HTTPS, or configure SSH keys.
 
-**Troubleshooting**
-- If the app shows an error: `Error: 'my_model' folder is missing! Please run 'download_model.py' first.` — run the `download_model.py` script.
-- If `GOOGLE_API_KEY` or `PINECONE_API_KEY` are missing, set them in your local `.env`.
-- If Pinecone index operations fail, verify your Pinecone key and index name in the Pinecone console.
+  - For HTTPS push with PAT (recommended for automation):
 
-**Development & Contribution**
-- Keep `.env` out of commits. Prefer `.env.example` to document required variables.
-- Add tests or CI workflow snippets under `.github/workflows/` if you want to automate checks.
-- If you want, submit a PR to add a `requirements.txt` or `pyproject.toml` for reproducible installs.
+  ```powershell
+  git remote set-url origin https://<username>:<PAT>@github.com/<owner>/<repo>.git
+  git push origin main
+  ```
 
-**Files of interest**
-- `intelsage/sage.py` — Streamlit app (main project UI and logic).
-- `intelsage/download_model.py` — script to fetch the local embedding model.
-- `.env.example` — template for environment variables.
+  - For SSH, ensure your public key is added to GitHub and remote uses `git@github.com:owner/repo.git`.
 
-**License**
-This repository does not include a license file. Add a `LICENSE` if you want to make usage terms explicit.
+- Branch protection or required reviews: GitHub may block direct pushes to `main`. Either create a feature branch, open a Pull Request, and get required approvals, or adjust branch protection in repository settings.
 
----
+- Merge conflicts: If remote changed since your last pull, pull/rebase first:
 
-If you'd like, I can also:
-- Add a `requirements.txt` generated from the environment I used to test the app.
-- Add a small PowerShell `setup.ps1` to automate virtualenv creation, `.env` creation from `.env.example`, model download, and dependency installation.
+```powershell
+git pull --rebase origin main
+git push origin main
+```
+
+If you're seeing a specific error message while pushing, paste it and I will give precise steps.
+
+**Final notes**
+- Populate PS number, team members, and deployment link.
+- Add optional screenshots in `docs/screenshots/` and reference them above.
+- If you want, I can create a `setup.ps1` to automate steps and a `requirements.txt` for reproducible installs.
+
+Good luck with your Final Evaluation — tell me if you want me to:
+- Add screenshots into the README for you.
+- Create a `setup.ps1` and `requirements.txt` and push them to the repo.
