@@ -9,7 +9,7 @@ import os
 import io
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file.
 load_dotenv() 
 
 st.set_page_config(
